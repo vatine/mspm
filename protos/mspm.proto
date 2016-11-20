@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package mspm;
+
+message SetLabelRequest {
+  string PackageName = 1;
+  string Version = 2;
+  repeated string Label = 3;
+}
+
+message PackageInformationRequest {
+  string PackageName = 1;
+}
+
+message PackageInformation {
+  string PackageName = 1;
+  string Version = 2;
+  repeated string Label = 3;
+}
+
+message PackageInformationResponse {
+  repeated PackageInformation PackageData = 1;
+}
+
+message File {
+  string Name = 1;
+  string Owner = 2;
+  string Group = 3;
+  int32  Mode = 4;
+  repeated byte Contents = 5;
+}
+
+message NewPackage {
+  string PackageName = 1;
+  repeated File = 2;
+}
+
+service Mspm {
+  rpc SetLabels (SetLabelRequest) returns (PackageInformation) {}
+  rpc GetPackageInformation (PackageInformationRequest) returns (PackageInformationResponse) {}
+  rpc UploadPackage (NewPackage) returns (PackageInformation) {}
+}
+
+  
