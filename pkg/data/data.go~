@@ -1,0 +1,58 @@
+// Various internal data structures for MSPM
+package data
+
+import (
+	"sync"
+)
+
+// Represents a general MSPM package (that is, all versions and labels).
+type Package struct {
+	lock sync.Mutex
+	name string
+	versions map[string]*PackageVersion
+	labels map[string]*PackageVersion
+}
+
+// Data for a specific version of a package.
+type PackageVersion struct {
+	name string
+	version string
+	labels map[string]struct{}
+	dataPath string
+}
+
+type DataStore struct {
+	lock sync.Mutex
+	playground string
+	store string
+	packages map[string]*Package
+}
+
+// Set the label newLabel on the package-version designated by
+// designator. This can either be the version number (a hash of the
+// contents) or a label identifying the package you want to modify.
+// If the label is alreday in use for a package-version, it will be
+// removed from it.
+func (p *Package) SetLabel(designator, newLabel string) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	
+	target, ok := p.versions[designator]
+	if !ok {
+		target, ok = p.labels[designator]
+		if !ok {
+			return fmt.Errorf("No package-version designated by %s", designator)
+		}
+	}
+
+	old, ok := p.labels[newLabel]
+	if ok {
+		// There is a package that hs this label, let us
+		// immediately get rid of it, so we do not have any
+		// conflicts.
+		delete(old.labels, newLabel)
+	}
+	target.labels[newLabel] = struct{}
+	p.labels[newLabel] = target
+	return nil
+}
