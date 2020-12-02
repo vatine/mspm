@@ -29,7 +29,7 @@ message File {
   string Owner = 2;
   string Group = 3;
   int32  Mode = 4;
-  bytes Contents = 5;
+  bytes  Contents = 5;
 }
 
 message NewPackage {
