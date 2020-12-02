@@ -6,6 +6,15 @@ import (
 	"testing"
 )
 
+func newPackageVersion(name, version string) PackageVersion {
+	return PackageVersion{
+		Name: name,
+		Labels: make(map[string]struct{}),
+		DataPath: "dataPath",
+		Version: version,
+	}
+}
+
 func TestSetLabel(t *testing.T) {
 	// This actually tries to provoke data races
 
@@ -14,7 +23,7 @@ func TestSetLabel(t *testing.T) {
 	p := newPackage("foo")
 	c := make(chan struct{})
 
-	tests := 5
+	tests := 30
 	wg.Add(tests)
 
 	// Set everything up for data racing
@@ -34,14 +43,17 @@ func TestSetLabel(t *testing.T) {
 			}
 			wg.Done()
 		}(n)
+		
 		v := fmt.Sprintf("%d", n)
-		pv := NewPackageVersion("foo", v, "datapath")
+		pv := newPackageVersion("foo", v)
 		pvs = append(pvs, &pv)
 		p.versions[v] = &pv
 	}
-
+	
 	// Unleash the goroutines
+
 	close(c)
+	wg.Wait()
 
 	for n, pv := range pvs {
 		wantV := fmt.Sprintf("%d", n)

@@ -4,6 +4,8 @@ package data
 import (
 	"fmt"
 	"sync"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Represents a general MSPM package (that is, all versions and labels).
@@ -20,7 +22,14 @@ type PackageVersion struct {
 	Version string
 	Labels map[string]struct{}
 	DataPath string
+	fileMap map[string]fileInfo
 }
+
+type fileInfo struct {
+	owner string
+	mode  int32
+}
+
 
 type DataStore struct {
 	lock sync.Mutex
@@ -29,16 +38,6 @@ type DataStore struct {
 	packages map[string]*Package
 }
 
-
-
-func NewPackageVersion(name, version, dataPath string) PackageVersion {
-	return PackageVersion{
-		Name: name,
-		Version: version,
-		Labels: make(map[string]struct{}),
-		DataPath: dataPath,
-	}
-}
 
 // Set the label newLabel on the package-version designated by
 // designator. This can either be the version number (a hash of the
@@ -86,14 +85,19 @@ func (p *Package) setLabel(designator, newLabel string) error {
 	}
 
 	old, ok := p.labels[newLabel]
-	if ok {
-		// There is a package that hs this label, let us
+	if ok && old != target {
+		// There is a package that has this label, let us
 		// immediately get rid of it, so we do not have any
 		// conflicts.
 		delete(old.Labels, newLabel)
 	}
 	target.Labels[newLabel] = struct{}{}
 	p.labels[newLabel] = target
+	log.WithFields(log.Fields{
+		"target": target,
+		"old": old,
+		"labels": target.Labels,
+	}).Debug("setting labels")
 	return nil
 }
 
