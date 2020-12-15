@@ -1,6 +1,7 @@
 package data
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -38,7 +39,7 @@ func TestFileInfo(t *testing.T) {
 }
 
 func TestListFiles(t *testing.T) {
-	paths, _ := pathsUnderRoot("./testdata")
+	paths, _ := pathsUnderRoot("./testdata/hash")
 
 	expected := []string{"dir1/", "dir1/f1", "dir1/f2", "dir2/", "dir2/dir21/", "dir2/f1", "dir3/"}
 
@@ -51,5 +52,32 @@ func TestListFiles(t *testing.T) {
 		if got != want {
 			t.Errorf("Path element %d, saw %s want %s", ix, got, want)
 		}
+	}
+}
+
+func TestHash(t *testing.T) {
+	pv := &PackageVersion{
+		Name: "testpackage",
+		DataPath: "./testdata/hash",
+		Labels: make(map[string]struct{}),
+		fileMap: make(map[string]fileInfo),
+	}
+	pv.fileMap["dir1/"] = fileInfo{"root", 0755}
+	pv.fileMap["dir2/"] = fileInfo{"root", 0755}
+	pv.fileMap["dir2/dir21/"] = fileInfo{"root", 0755}
+	pv.fileMap["dir3/"] = fileInfo{"root", 0755}
+	pv.fileMap["dir1/f1"] = fileInfo{"root", 0644}
+	pv.fileMap["dir1/f2"] = fileInfo{"root", 0644}
+	pv.fileMap["dir2/f1"] = fileInfo{"root", 0644}
+
+	h, err := pv.hash()
+	if err != nil {
+		t.Errorf("Failed to hash, saw error %s", err)
+	}
+	got := fmt.Sprintf("%x", h)
+	want := "3c855f31642549cd0edc9af183c56a61a16da04df477f3c8697f51d82a37ac11d814bc37de9e34a0031ce1450f41ba039053fa52f9a252fc164ffb0c3da286ce"
+
+	if got != want {
+		t.Errorf("got %s, want %s", got, want)
 	}
 }

@@ -37,12 +37,14 @@ func (ds DataStore) NewPackageVersion(name string) (PackageVersion, error) {
 		Name: name,
 		Labels: make(map[string]struct{}),
 		DataPath: dataPath,
+		fileMap: make(map[string]fileInfo),
 	}, err
 }
 
-func (pv PackageVersion) AddDir(pvFile pb.File) error {
+func (pv *PackageVersion) AddDir(pvFile pb.File) error {
 	targetPath := filepath.Join(pv.DataPath, pvFile.Name)
 
+	pv.fileMap[pvFile.Name] = fileInfo{pvFile.Owner, pvFile.Mode}
 	return os.Mkdir(targetPath, os.ModeDir | 0777)
 }
 
@@ -241,8 +243,8 @@ func (pv *PackageVersion) Finish() error {
 
 	pv.Version = fmt.Sprintf("%x", hash)
 
-	files, _ := pathsUnderRoot(pv.dataPath)
-	outName := filepath.Join(pv.dataPath, "../..", fmt.Sprintf("%s-%s.tgz", pv.Name, pv.Version))
+	files, _ := pathsUnderRoot(pv.DataPath)
+	outName := filepath.Join(pv.DataPath, "../..", fmt.Sprintf("%s-%s.tgz", pv.Name, pv.Version))
 
 	out, err := os.Create(outName)
 	if err != nil {
@@ -256,45 +258,27 @@ func (pv *PackageVersion) Finish() error {
 	}
 	defer out.Close()
 
-	zipper, err := gzip.NewWriter(out)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-			"pv": pv.Name,
-			"version": pv.Version,
-			"filename": outName,
-		}).Error("creating gzip writer")
-		return err
-	}
+	zipper := gzip.NewWriter(out)
 
-	tarball, err := tar.NewWriter(zipper)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-			"pv": pv.Name,
-			"version": pv.Version,
-			"filename": outName,
-		}).Error("creating tar writer")
-		return err
-	}
+	tarball := tar.NewWriter(zipper)
 	defer tarball.Close()
 
 	for _, fname := range files {
-		fsname := filepath.Join(pv.dataPath, fname)
+		fsname := filepath.Join(pv.DataPath, fname)
 		tarname := fmt.Sprintf("%s-%s/%s", pv.Name, pv.Version, fname)
 		fi, err := os.Stat(fsname)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"error": err,
-				"fsname", fsname,
+				"fsname": fsname,
 			}).Error("archiving stat failed")
 			return err
 		}
-		func f() {
-			pvMode = pv.fileMap[fname].mode & 0777
-			tarHdr := tar.FileInfoHeader(fi, "")
+		func () {
+			pvMode := pv.fileMap[fname].mode & 0777
+			tarHdr, _ := tar.FileInfoHeader(fi, "")
 			tarHdr.Name = tarname
-			tarHdr.Mode = (tarHdr.Mode & 0xFFFE00) | pvMode
+			tarHdr.Mode = (tarHdr.Mode & 0xFFFE00) | int64(pvMode)
 			tarHdr.Uid = 0
 			tarHdr.Gid = 0
 			
