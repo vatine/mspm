@@ -3,6 +3,9 @@ package data
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 
 	log "github.com/sirupsen/logrus"
@@ -51,8 +54,27 @@ func (p *Package) SetLabel(designator, newLabel string) error {
 	return p.setLabel(designator, newLabel)
 }
 
+// Set a label on the designated version of a package. If that label
+// is attached to another version, make sure it is removed before we start.
+func (ds *DataStore) SetLabel(pkgname, designator, newLabel string) error {
+	ds.lock.Lock()
+	defer ds.lock.Unlock()
+	
+	p, ok := ds.packages[pkgname]
+	if !ok {
+		log.WithFields(log.Fields{
+			"name": pkgname,
+			"designator": designator,
+			"newLabel": newLabel,
+		}).Error("package not found")
+		return fmt.Errorf("package %s not found in data store", pkgname)
+	}
+
+	return p.SetLabel(designator, newLabel)
+}
+
 // Return the PackageVersion that corresponds to the requested
-// designatoir, as well as a bool that is true if tereturn hre is a
+// designator, as well as a bool that is true if there is a
 // PackageVersion that corresponds to the requested designator.
 //
 // For this purpose, a "designator" is either the version string, or a label.
@@ -126,6 +148,16 @@ func newPackage(name string) *Package {
 	return p
 }
 
+// Create a new data store with a specific playground and storage location.
+func NewDataStore(playground, store string) *DataStore {
+	ds := new(DataStore)
+	ds.playground = playground
+	ds.store = store
+	ds.packages = make(map[string]*Package)
+
+	return ds
+}
+
 // Add a PackageVersion to the data store. As we already have the
 // package name and version detail(s), we don't take them as extra
 // parameters. If we happen to already have the specific version
@@ -139,11 +171,55 @@ func (ds *DataStore) AddPackageVersion(pv PackageVersion) {
 	if !ok {
 		// No previous version of this package added, make it so
 		p = newPackage(pv.Name)
-		ds.packages[pv.Name] = p	}
+		ds.packages[pv.Name] = p
+	}
+
+	// The package tarball is probably in the playground.
+	tarball := pv.DataPath
+	if strings.HasPrefix(tarball, ds.playground) {
+		fname := filepath.Base(tarball)
+		newName := filepath.Join(ds.store, fname)
+		err := os.Rename(tarball, newName)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"error": err,
+				"fname": fname,
+				"name": pv.Name,
+				"version": pv.Version,
+			}).Warning("renaming PackageVersion tarball")
+		} else {
+			pv.DataPath = newName
+		}
+	}
 
 	p.AddVersion(pv)
 }
 
+// Return all PackageVersions available for a specific Package. This
+// will be an empty (or nil) slice if the Package does not exist. The
+// existence is signalled by the bool.
+func (ds *DataStore) GetPackageVersions(pkg string) ([]PackageVersion, bool) {
+	ds.lock.Lock()
+	defer ds.lock.Unlock()
+
+	var rv []PackageVersion
+	p, ok := ds.packages[pkg]
+	if !ok {
+		log.WithFields(log.Fields{
+			"name": pkg,
+		}).Warning("GetPackage - no package with the name found.")
+		return rv, false
+	}
+
+	for _, pv := range p.versions {
+		rv = append(rv, *pv)
+	}
+
+	return rv, true
+}
+
+// Get the specific PackageVersion designated by the designator for a
+// Package with a specific name.
 func (ds *DataStore) GetPackageVersion(pkg, designator string) (PackageVersion, error) {
 	ds.lock.Lock()
 	defer ds.lock.Unlock()
@@ -160,4 +236,14 @@ func (ds *DataStore) GetPackageVersion(pkg, designator string) (PackageVersion, 
 	}
 
 	return *pv, nil
+}
+
+func (pv PackageVersion) GetAllLabels() []string {
+	var rv []string
+
+	for k, _ := range pv.Labels {
+		rv = append(rv, k)
+	}
+
+	return rv
 }
