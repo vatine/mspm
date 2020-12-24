@@ -41,7 +41,7 @@ func (ds DataStore) NewPackageVersion(name string) (PackageVersion, error) {
 	}, err
 }
 
-func (pv *PackageVersion) AddDir(pvFile pb.File) error {
+func (pv *PackageVersion) AddDir(pvFile *pb.File) error {
 	targetPath := filepath.Join(pv.DataPath, pvFile.Name)
 
 	pv.fileMap[pvFile.Name] = fileInfo{pvFile.Owner, pvFile.Mode}
@@ -49,7 +49,7 @@ func (pv *PackageVersion) AddDir(pvFile pb.File) error {
 }
 
 // Add a file to the on-disk temporary storage of a file.
-func (pv PackageVersion) AddFile(pvFile pb.File) error {
+func (pv PackageVersion) AddFile(pvFile *pb.File) error {
 	targetPath := filepath.Join(pv.DataPath, pvFile.Name)
 
 	out, err := os.Create(targetPath)
@@ -294,6 +294,12 @@ func (pv *PackageVersion) Finish() error {
 			io.Copy(tarball, in)
 		}()
 	}
-	
-	return saveErr
+
+	if saveErr != nil {
+		return saveErr
+	}
+
+	pv.DataPath = outName
+	pv.fileMap = make(map[string]fileInfo)
+	return nil
 }
