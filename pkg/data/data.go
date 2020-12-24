@@ -13,19 +13,19 @@ import (
 
 // Represents a general MSPM package (that is, all versions and labels).
 type Package struct {
-	lock sync.Mutex
-	name string
+	lock     sync.Mutex
+	name     string
 	versions map[string]*PackageVersion
-	labels map[string]*PackageVersion
+	labels   map[string]*PackageVersion
 }
 
 // Data for a specific version of a package.
 type PackageVersion struct {
-	Name string
-	Version string
-	Labels map[string]struct{}
+	Name     string
+	Version  string
+	Labels   map[string]struct{}
 	DataPath string
-	fileMap map[string]fileInfo
+	fileMap  map[string]fileInfo
 }
 
 type fileInfo struct {
@@ -33,14 +33,12 @@ type fileInfo struct {
 	mode  int32
 }
 
-
 type DataStore struct {
-	lock sync.Mutex
+	lock       sync.Mutex
 	playground string
-	store string
-	packages map[string]*Package
+	store      string
+	packages   map[string]*Package
 }
-
 
 // Set the label newLabel on the package-version designated by
 // designator. This can either be the version number (a hash of the
@@ -59,13 +57,13 @@ func (p *Package) SetLabel(designator, newLabel string) error {
 func (ds *DataStore) SetLabel(pkgname, designator, newLabel string) error {
 	ds.lock.Lock()
 	defer ds.lock.Unlock()
-	
+
 	p, ok := ds.packages[pkgname]
 	if !ok {
 		log.WithFields(log.Fields{
-			"name": pkgname,
+			"name":       pkgname,
 			"designator": designator,
-			"newLabel": newLabel,
+			"newLabel":   newLabel,
 		}).Error("package not found")
 		return fmt.Errorf("package %s not found in data store", pkgname)
 	}
@@ -117,7 +115,7 @@ func (p *Package) setLabel(designator, newLabel string) error {
 	p.labels[newLabel] = target
 	log.WithFields(log.Fields{
 		"target": target,
-		"old": old,
+		"old":    old,
 		"labels": target.Labels,
 	}).Debug("setting labels")
 	return nil
@@ -182,9 +180,9 @@ func (ds *DataStore) AddPackageVersion(pv PackageVersion) {
 		err := os.Rename(tarball, newName)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"error": err,
-				"fname": fname,
-				"name": pv.Name,
+				"error":   err,
+				"fname":   fname,
+				"name":    pv.Name,
 				"version": pv.Version,
 			}).Warning("renaming PackageVersion tarball")
 		} else {

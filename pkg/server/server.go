@@ -7,7 +7,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
-	
+
 	"github.com/vatine/mspm/pkg/data"
 	pb "github.com/vatine/mspm/pkg/protos"
 )
@@ -39,8 +39,8 @@ func (s *Server) SetLabels(ctx context.Context, in *pb.SetLabelRequest, opts ...
 	pkgName := in.GetPackageName()
 	version := in.GetVersion()
 	log.WithFields(log.Fields{
-		"name": pkgName,
-		"version": version,
+		"name":      pkgName,
+		"version":   version,
 		"newLabels": in.Label,
 	}).Debug("SetLabels")
 
@@ -48,7 +48,7 @@ func (s *Server) SetLabels(ctx context.Context, in *pb.SetLabelRequest, opts ...
 		log.Error("SetLabels - missing package name")
 		return nil, fmt.Errorf("No package name specified")
 	}
-	
+
 	if version == "" {
 		log.WithFields(log.Fields{
 			"name": pkgName,
@@ -60,19 +60,19 @@ func (s *Server) SetLabels(ctx context.Context, in *pb.SetLabelRequest, opts ...
 
 	for ix, label := range in.GetLabel() {
 		log.WithFields(log.Fields{
-			"ix": ix,
-			"name": pkgName,
+			"ix":      ix,
+			"name":    pkgName,
 			"version": version,
-			"label": label,
+			"label":   label,
 		}).Debug("SetLabels - setting label")
 		err := s.dataStore.SetLabel(pkgName, version, label)
 		if err != nil {
 			rErr = err
 			log.WithFields(log.Fields{
-				"err": err,
-				"name": pkgName,
+				"err":     err,
+				"name":    pkgName,
 				"version": version,
-				"label": label,
+				"label":   label,
 			}).Error("SetLabels - setting label")
 		}
 	}
@@ -80,7 +80,7 @@ func (s *Server) SetLabels(ctx context.Context, in *pb.SetLabelRequest, opts ...
 	pv, err := s.dataStore.GetPackageVersion(pkgName, version)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"error":   err,
 			"package": pkgName,
 			"version": version,
 		}).Error("SetLabels - unexpected missing")
@@ -120,7 +120,7 @@ func (s *Server) UploadPackage(in *pb.NewPackage, opts ...grpc.CallOption) (*pb.
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
-			"name": name,
+			"name":  name,
 		}).Error("UploadPackage")
 		return nil, err
 	}

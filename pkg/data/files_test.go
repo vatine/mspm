@@ -6,7 +6,10 @@ import (
 )
 
 func TestModes(t *testing.T) {
-	cases := []struct{m int32; e string}{
+	cases := []struct {
+		m int32
+		e string
+	}{
 		{0752, "rwxr-x-w-"}, {1, "--------x"},
 	}
 
@@ -17,11 +20,11 @@ func TestModes(t *testing.T) {
 			t.Errorf("Case #%d, got %s, want %s", ix, got, want)
 		}
 	}
-	
+
 }
 
 func TestFileInfo(t *testing.T) {
-	cases := []struct{
+	cases := []struct {
 		f fileInfo
 		e string
 	}{
@@ -57,10 +60,10 @@ func TestListFiles(t *testing.T) {
 
 func TestHash(t *testing.T) {
 	pv := &PackageVersion{
-		Name: "testpackage",
+		Name:     "testpackage",
 		DataPath: "./testdata/hash",
-		Labels: make(map[string]struct{}),
-		fileMap: make(map[string]fileInfo),
+		Labels:   make(map[string]struct{}),
+		fileMap:  make(map[string]fileInfo),
 	}
 	pv.fileMap["dir1/"] = fileInfo{"root", 0755}
 	pv.fileMap["dir2/"] = fileInfo{"root", 0755}

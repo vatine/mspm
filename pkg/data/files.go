@@ -8,8 +8,8 @@ package data
 
 import (
 	"archive/tar"
-	"crypto/sha512"
 	"compress/gzip"
+	"crypto/sha512"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	
+
 	pb "github.com/vatine/mspm/pkg/protos"
 )
 
@@ -28,16 +28,16 @@ func (ds DataStore) NewPackageVersion(name string) (PackageVersion, error) {
 	dataPath, err := ioutil.TempDir(tdPath, "tmp-")
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"error":  err,
 			"tdPath": tdPath,
-			"name": name,
+			"name":   name,
 		}).Error("creating tempdir")
 	}
 	return PackageVersion{
-		Name: name,
-		Labels: make(map[string]struct{}),
+		Name:     name,
+		Labels:   make(map[string]struct{}),
 		DataPath: dataPath,
-		fileMap: make(map[string]fileInfo),
+		fileMap:  make(map[string]fileInfo),
 	}, err
 }
 
@@ -45,7 +45,7 @@ func (pv *PackageVersion) AddDir(pvFile *pb.File) error {
 	targetPath := filepath.Join(pv.DataPath, pvFile.Name)
 
 	pv.fileMap[pvFile.Name] = fileInfo{pvFile.Owner, pvFile.Mode}
-	return os.Mkdir(targetPath, os.ModeDir | 0777)
+	return os.Mkdir(targetPath, os.ModeDir|0777)
 }
 
 // Add a file to the on-disk temporary storage of a file.
@@ -55,8 +55,8 @@ func (pv PackageVersion) AddFile(pvFile *pb.File) error {
 	out, err := os.Create(targetPath)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
-			"name": pv.Name,
+			"error":      err,
+			"name":       pv.Name,
 			"targetPath": targetPath,
 		}).Error("opening PackageVersion file")
 		return err
@@ -68,17 +68,17 @@ func (pv PackageVersion) AddFile(pvFile *pb.File) error {
 		if err != nil {
 			if n > 0 {
 				log.WithFields(log.Fields{
-					"error": err,
-					"name": pv.Name,
-					"n": n,
+					"error":   err,
+					"name":    pv.Name,
+					"n":       n,
 					"written": written,
 				}).Warning("non-full write")
 				written += n
 				continue
 			}
 			log.WithFields(log.Fields{
-				"error": err,
-				"name": pv.Name,
+				"error":   err,
+				"name":    pv.Name,
 				"written": written,
 			}).Error("failed writing data")
 			return err
@@ -103,8 +103,8 @@ func pathsUnderRootInternal(root, offset string) ([]string, error) {
 	fi, err := os.Stat(target)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
-			"root": root,
+			"error":  err,
+			"root":   root,
 			"offset": offset,
 			"target": target,
 		}).Error("stating initial directory")
@@ -122,8 +122,8 @@ func pathsUnderRootInternal(root, offset string) ([]string, error) {
 	dir, err := os.Open(target)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
-			"root": root,
+			"error":  err,
+			"root":   root,
 			"offset": offset,
 			"target": target,
 		}).Error("opening initial directory")
@@ -134,7 +134,7 @@ func pathsUnderRootInternal(root, offset string) ([]string, error) {
 	names, err := dir.Readdirnames(-1)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
+			"error":  err,
 			"target": target,
 		}).Error("listing files")
 	}
@@ -144,9 +144,9 @@ func pathsUnderRootInternal(root, offset string) ([]string, error) {
 		fi, err := os.Stat(filepath.Join(target, name))
 		if err != nil {
 			log.WithFields(log.Fields{
-				"error": err,
+				"error":  err,
 				"target": target,
-				"name": name,
+				"name":   name,
 			}).Error("stating internal file")
 			return rv, err
 		}
@@ -171,7 +171,10 @@ func pathsUnderRootInternal(root, offset string) ([]string, error) {
 // Return a "mode-bit" representation for 3 bits
 func mode(in int32) string {
 	rv := []byte("---")
-	data := []struct{m int32; s byte}{{4, 'r'},{2, 'w'},{1, 'x'}}
+	data := []struct {
+		m int32
+		s byte
+	}{{4, 'r'}, {2, 'w'}, {1, 'x'}}
 
 	for i, d := range data {
 		if (in & d.m) == d.m {
@@ -184,12 +187,12 @@ func mode(in int32) string {
 
 // Return a string that is the textual representation of a file-mode
 func modes(i int32) string {
-	return fmt.Sprintf("%s%s%s", mode(i >> 6), mode(i >> 3), mode(i))
+	return fmt.Sprintf("%s%s%s", mode(i>>6), mode(i>>3), mode(i))
 }
 
 func (f fileInfo) forHash() string {
 	return fmt.Sprintf("«%s»«%s»", f.owner, modes(f.mode))
-	
+
 }
 
 func (pv *PackageVersion) hash() ([]byte, error) {
@@ -199,7 +202,7 @@ func (pv *PackageVersion) hash() ([]byte, error) {
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
-			"path": pv.DataPath,
+			"path":  pv.DataPath,
 		}).Error("listing files")
 		return []byte{}, err
 	}
@@ -209,7 +212,7 @@ func (pv *PackageVersion) hash() ([]byte, error) {
 		if !ok {
 			log.WithFields(log.Fields{
 				"pv.Name": pv.Name,
-				"name": name,
+				"name":    name,
 			}).Error("missing fileIfo for name")
 			return hash.Sum(nil), fmt.Errorf("File %s is unknown", name)
 		}
@@ -236,7 +239,7 @@ func (pv *PackageVersion) Finish() error {
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
-			"name": pv.Name,
+			"name":  pv.Name,
 		}).Error("hashing packageVersion")
 		return err
 	}
@@ -249,9 +252,9 @@ func (pv *PackageVersion) Finish() error {
 	out, err := os.Create(outName)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"error": err,
-			"pv": pv.Name,
-			"version": pv.Version,
+			"error":    err,
+			"pv":       pv.Name,
+			"version":  pv.Version,
 			"filename": outName,
 		}).Error("opening archive file")
 		return err
@@ -269,23 +272,23 @@ func (pv *PackageVersion) Finish() error {
 		fi, err := os.Stat(fsname)
 		if err != nil {
 			log.WithFields(log.Fields{
-				"error": err,
+				"error":  err,
 				"fsname": fsname,
 			}).Error("archiving stat failed")
 			return err
 		}
-		func () {
+		func() {
 			pvMode := pv.fileMap[fname].mode & 0777
 			tarHdr, _ := tar.FileInfoHeader(fi, "")
 			tarHdr.Name = tarname
 			tarHdr.Mode = (tarHdr.Mode & 0xFFFE00) | int64(pvMode)
 			tarHdr.Uid = 0
 			tarHdr.Gid = 0
-			
+
 			in, err := os.Open(fsname)
 			if err != nil {
 				log.WithFields(log.Fields{
-					"error": err,
+					"error":  err,
 					"fsname": fsname,
 				}).Error("failed to open input file")
 			}

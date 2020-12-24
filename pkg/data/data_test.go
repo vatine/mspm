@@ -8,10 +8,10 @@ import (
 
 func newPackageVersion(name, version string) PackageVersion {
 	return PackageVersion{
-		Name: name,
-		Labels: make(map[string]struct{}),
+		Name:     name,
+		Labels:   make(map[string]struct{}),
 		DataPath: "dataPath",
-		Version: version,
+		Version:  version,
 	}
 }
 
@@ -29,7 +29,7 @@ func TestSetLabel(t *testing.T) {
 	// Set everything up for data racing
 	for n := 0; n < tests; n++ {
 		go func(n int) {
-			<- c
+			<-c
 			v := fmt.Sprintf("%d", n)
 			d1 := fmt.Sprintf("v%d", n)
 			d2 := fmt.Sprintf("v%d.0", n)
@@ -43,13 +43,13 @@ func TestSetLabel(t *testing.T) {
 			}
 			wg.Done()
 		}(n)
-		
+
 		v := fmt.Sprintf("%d", n)
 		pv := newPackageVersion("foo", v)
 		pvs = append(pvs, &pv)
 		p.versions[v] = &pv
 	}
-	
+
 	// Unleash the goroutines
 
 	close(c)
