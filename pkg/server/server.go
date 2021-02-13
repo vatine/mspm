@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc"
 
 	"github.com/vatine/mspm/pkg/data"
 	pb "github.com/vatine/mspm/pkg/protos"
@@ -17,6 +16,8 @@ type Server struct {
 	dataStore *data.DataStore
 }
 
+// Convert a data.PackageVersion to a pb.PackageInformation, as this
+// will be useful in a few cases.
 func packageInformationFromPackageVersion(pv data.PackageVersion) *pb.PackageInformation {
 	rv := new(pb.PackageInformation)
 
@@ -29,13 +30,16 @@ func packageInformationFromPackageVersion(pv data.PackageVersion) *pb.PackageInf
 	return rv
 }
 
+// Create a new Server data structure, populate it with paths to the
+// playground (temp storage) and primary storage directories.
 func NewServer(playground, store string) *Server {
 	ds := data.NewDataStore(playground, store)
 
 	return &Server{dataStore: ds}
 }
 
-func (s *Server) SetLabels(ctx context.Context, in *pb.SetLabelRequest, opts ...grpc.CallOption) (*pb.PackageInformation, error) {
+// Set labels on a specific version of a package.
+func (s *Server) SetLabels(ctx context.Context, in *pb.SetLabelRequest) (*pb.PackageInformation, error) {
 	pkgName := in.GetPackageName()
 	version := in.GetVersion()
 	log.WithFields(log.Fields{
@@ -89,7 +93,8 @@ func (s *Server) SetLabels(ctx context.Context, in *pb.SetLabelRequest, opts ...
 	return packageInformationFromPackageVersion(pv), rErr
 }
 
-func (s *Server) GetPackageInformation(in *pb.PackageInformationRequest, opts ...grpc.CallOption) (*pb.PackageInformationResponse, error) {
+// Get information on a specific package.
+func (s *Server) GetPackageInformation(ctx context.Context, in *pb.PackageInformationRequest) (*pb.PackageInformationResponse, error) {
 	rv := new(pb.PackageInformationResponse)
 
 	name := in.GetPackageName()
@@ -110,7 +115,8 @@ func (s *Server) GetPackageInformation(in *pb.PackageInformationRequest, opts ..
 	return rv, nil
 }
 
-func (s *Server) UploadPackage(in *pb.NewPackage, opts ...grpc.CallOption) (*pb.PackageInformation, error) {
+// Receive a new version of a package.
+func (s *Server) UploadPackage(ctx context.Context, in *pb.NewPackage) (*pb.PackageInformation, error) {
 	name := in.GetPackageName()
 	if name == "" {
 		return nil, fmt.Errorf("No package name specified.")
@@ -132,4 +138,37 @@ func (s *Server) UploadPackage(in *pb.NewPackage, opts ...grpc.CallOption) (*pb.
 	}
 
 	return packageInformationFromPackageVersion(pv), nil
+}
+
+// Send a specific version of a package to a client.
+func (s *Server) GetPackage(ctx context.Context, in *pb.GetPackageRequest) (*pb.GetPackageResponse, error) {
+	name := in.GetPackageName()
+	labelDes := in.GetDesignator()
+
+	if name == "" {
+		log.Error("GetPackage called with empty name")
+		return nil, fmt.Errorf("No name specified")
+	}
+	if labelDes == "" {
+		log.WithFields(log.Fields{
+			"name": name,
+		}).Error("GetPackage, blank version designator")
+		return nil, fmt.Errorf("No designator specified")
+	}
+
+	pv, err := s.dataStore.GetPackageVersion(name, labelDes)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error":      err,
+			"name":       name,
+			"designator": labelDes,
+		}).Error("GetPackage fetching packageversion")
+		return nil, err
+	}
+
+	resp := pb.GetPackageResponse{
+		PackageData: packageInformationFromPackageVersion(pv),
+	}
+
+	return &resp, nil
 }
