@@ -1,0 +1,2 @@
+#!/bin/sh
+echo stop fake1-deadbeef
