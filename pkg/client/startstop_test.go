@@ -62,3 +62,29 @@ func TestRun(t *testing.T) {
 		}
 	}
 }
+
+func TestStart(t *testing.T) {
+	c := Client{
+		mspmDir: "./testdata",
+	}
+
+	testcases := []struct {
+		pkg string
+		err bool
+	}{
+		{"fake1", false}, {"fake2", true},
+		{"fake1-deadbeef", true},
+	}
+
+	for ix, tc := range testcases {
+		err := c.Start(tc.pkg)
+		errSeen := (err != nil)
+
+		switch {
+		case errSeen && !tc.err:
+			t.Errorf("Case #%d, saw unexpected error %v", ix, err)
+		case !errSeen && tc.err:
+			t.Errorf("Case #%d, expected to see error, saw none.", ix)
+		}
+	}
+}
