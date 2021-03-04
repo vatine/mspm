@@ -1,55 +1,12 @@
 package client
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path"
 
 	log "github.com/sirupsen/logrus"
-
-	pb "github.com/vatine/mspm/pkg/protos"
 )
-
-// Return the version of a package that corresponds to a label/version.
-func (c *Client) matchLabelToVersion(pkgName, label string) (string, error) {
-	req := pb.PackageInformationRequest{PackageName: pkgName}
-	resp, err := c.client.GetPackageInformation(context.Background(), &req)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error":   err,
-			"pkgName": pkgName,
-			"label":   label,
-		}).Error("activate gRPC call")
-		return "", err
-	}
-
-	var version string
-
-	for _, pkgInfo := range resp.GetPackageData() {
-		if label == pkgInfo.GetVersion() {
-			version = pkgInfo.GetVersion()
-			break
-		}
-		for _, pkgLabel := range pkgInfo.GetLabel() {
-			if label == pkgLabel {
-				version = pkgInfo.GetVersion()
-				break
-			}
-		}
-	}
-
-	if version == "" {
-		log.WithFields(log.Fields{
-			"pkgName": pkgName,
-			"label":   label,
-		}).Error("activate label/version not found")
-
-		return "", fmt.Errorf("package %s version/label %s not found", pkgName, label)
-	}
-
-	return version, nil
-}
 
 // Activate the package with a label (or version).
 // If the requested version is already active, leave things as they are.

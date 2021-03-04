@@ -10,19 +10,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// return true if the specified path points at a symlink.
-func checkSymlink(dirPath string) bool {
-	stat, err := os.Lstat(dirPath)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-			"path":  dirPath,
-		}).Error("checkSymlink")
-		return false
-	}
-	return (stat.Mode() & os.ModeSymlink) == os.ModeSymlink
-}
-
 // Run a command (we expect this to be one of "start" or "stop"), if
 // the path doesn't exist this isn't an error, it's "just" a library
 // package.
