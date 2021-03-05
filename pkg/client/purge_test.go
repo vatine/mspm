@@ -57,3 +57,118 @@ func TestListAll(t *testing.T) {
 		t.Errorf("Elements returned, %v. None were expected.", t2)
 	}
 }
+
+func TestPurgeIncludeActive(t *testing.T) {
+	fakeClient := newFakeActDeact(t)
+	defer fakeClient.tearDown()
+	client := Client{
+		client:  fakeClient,
+		mspmDir: fakeClient.tmpDir,
+	}
+
+	fakeClient.addPackage("fake", "deadbeef", "v1", "v2", "v3")
+	fakeClient.addPackage("fake", "f00dbeef", "v4")
+	client.Activate("fake", "v1")
+
+	err := client.Purge("fake", "v1")
+	if err != nil {
+		t.Errorf("Unexpected error purging: %v", err)
+	}
+
+	left, err := listAllPossibleVersions(fakeClient.tmpDir, "fake")
+	if err != nil {
+		t.Errorf("Unexpected error getting all versions: %v", err)
+	}
+	if len(left) != 2 {
+		t.Errorf("Unexpected versions left, saw %v, expected 2", left)
+	}
+
+	err = client.Purge("fake", "v4")
+	if err != nil {
+		t.Errorf("Unexpected error purging: %v", err)
+	}
+
+	left, err = listAllPossibleVersions(fakeClient.tmpDir, "fake")
+	if err != nil {
+		t.Errorf("Unexpected error getting all versions: %v", err)
+	}
+	if len(left) != 1 {
+		t.Errorf("Unexpected versions left, saw %v, expected 1", left)
+	}
+}
+
+func TestPurgeNoArgs(t *testing.T) {
+	fakeClient := newFakeActDeact(t)
+	defer fakeClient.tearDown()
+	client := Client{
+		client:  fakeClient,
+		mspmDir: fakeClient.tmpDir,
+	}
+
+	fakeClient.addPackage("fake", "deadbeef", "v1", "v2", "v3")
+	fakeClient.addPackage("fake", "f00dbeef", "v4")
+	client.Activate("fake", "v1")
+
+	err := client.Purge("fake")
+	if err != nil {
+		t.Errorf("Unexpected error purging: %v", err)
+	}
+
+	left, err := listAllPossibleVersions(fakeClient.tmpDir, "fake")
+	if err != nil {
+		t.Errorf("Unexpected error getting all versions: %v", err)
+	}
+	if len(left) != 1 {
+		t.Errorf("Unexpected versions left, saw %v, expected 1", left)
+	}
+}
+
+func TestPurgeNoArgsNoActive(t *testing.T) {
+	fakeClient := newFakeActDeact(t)
+	defer fakeClient.tearDown()
+	client := Client{
+		client:  fakeClient,
+		mspmDir: fakeClient.tmpDir,
+	}
+
+	fakeClient.addPackage("fake", "deadbeef", "v1", "v2", "v3")
+	fakeClient.addPackage("fake", "f00dbeef", "v4")
+
+	err := client.Purge("fake")
+	if err != nil {
+		t.Errorf("Unexpected error purging: %v", err)
+	}
+
+	left, err := listAllPossibleVersions(fakeClient.tmpDir, "fake")
+	if err != nil {
+		t.Errorf("Unexpected error getting all versions: %v", err)
+	}
+	if len(left) != 0 {
+		t.Errorf("Unexpected versions left, saw %v, expected 0", left)
+	}
+}
+
+func TestPurgeWrongPackage(t *testing.T) {
+	fakeClient := newFakeActDeact(t)
+	defer fakeClient.tearDown()
+	client := Client{
+		client:  fakeClient,
+		mspmDir: fakeClient.tmpDir,
+	}
+
+	fakeClient.addPackage("fake", "deadbeef", "v1", "v2", "v3")
+	fakeClient.addPackage("fake", "f00dbeef", "v4")
+
+	err := client.Purge("ekaf")
+	if err != nil {
+		t.Errorf("Unexpected error purging: %v", err)
+	}
+
+	left, err := listAllPossibleVersions(fakeClient.tmpDir, "fake")
+	if err != nil {
+		t.Errorf("Unexpected error getting all versions: %v", err)
+	}
+	if len(left) != 2 {
+		t.Errorf("Unexpected versions left, saw %v, expected 0", left)
+	}
+}
